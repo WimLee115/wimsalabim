@@ -858,6 +858,304 @@ def print_traffic_analysis(report) -> None:
     console.print(panel)
 
 
+def print_security_txt(report) -> None:
+    grade_style = GRADE_COLORS.get(report.grade, "white")
+
+    if not report.found:
+        console.print(Panel(
+            "[yellow]security.txt not found (RFC 9116)[/yellow]\n"
+            "[dim]Consider adding /.well-known/security.txt for responsible disclosure[/dim]",
+            title=f"[bold white]Security.txt[/bold white]  [{grade_style}]{report.grade}[/{grade_style}]",
+            border_style="yellow", box=box.ROUNDED,
+        ))
+        return
+
+    table = Table(box=None, show_header=False, padding=(0, 2))
+    table.add_column("Key", style="bold white", width=24)
+    table.add_column("Value")
+
+    table.add_row("URL", report.url)
+    table.add_row("PGP Signed", _bool_icon(report.signed))
+    table.add_row("Contact", _bool_icon(report.has_contact))
+    table.add_row("Expires", _bool_icon(report.has_expires))
+    table.add_row("Encryption", _bool_icon(report.has_encryption))
+    table.add_row("Canonical", _bool_icon(report.has_canonical))
+    table.add_row("Policy", _bool_icon(report.has_policy))
+    if report.expired:
+        table.add_row("[red]Status[/red]", "[bold red]EXPIRED[/bold red]")
+
+    if report.issues:
+        table.add_row("", "")
+        for issue in report.issues[:5]:
+            table.add_row("[yellow]Issue[/yellow]", f"[yellow]{issue}[/yellow]")
+
+    panel = Panel(
+        table,
+        title=f"[bold white]Security.txt (RFC 9116)[/bold white]  [{grade_style}]Grade: {report.grade}[/{grade_style}]",
+        subtitle=f"{report.field_count} fields | Required: {_bool_icon(report.required_fields_present)}",
+        border_style="cyan", box=box.ROUNDED,
+    )
+    console.print(panel)
+
+
+def print_js_analysis(report) -> None:
+    if not report.available:
+        console.print(Panel("[dim]No JavaScript files found[/dim]", title="JS Analysis", border_style="dim"))
+        return
+
+    grade_style = GRADE_COLORS.get(report.grade, "white")
+
+    from rich.console import Group
+    parts = []
+
+    if report.secrets:
+        sec_table = Table(box=box.SIMPLE, show_header=True, header_style="bold red")
+        sec_table.add_column("Type", style="bold white", width=22)
+        sec_table.add_column("Severity", width=10)
+        sec_table.add_column("Confidence", width=10)
+        sec_table.add_column("Source", style="dim", max_width=35)
+
+        for s in report.secrets[:10]:
+            sev_style = RISK_COLORS.get(s.severity, "white")
+            sec_table.add_row(
+                s.pattern_name,
+                f"[{sev_style}]{s.severity.upper()}[/{sev_style}]",
+                f"{s.confidence:.0%}",
+                s.source_url.split("/")[-1][:35],
+            )
+        parts.append(sec_table)
+
+    if report.endpoints:
+        parts.append(Text(""))
+        ep_table = Table(box=box.SIMPLE, show_header=True, header_style="bold cyan")
+        ep_table.add_column("Endpoint", style="bold white", max_width=50)
+        ep_table.add_column("Type", width=14)
+
+        for ep in report.endpoints[:10]:
+            ep_table.add_row(ep.url[:50], ep.method)
+        parts.append(ep_table)
+
+    if report.source_maps_exposed:
+        parts.append(Text(""))
+        for sm in report.source_maps_exposed[:5]:
+            parts.append(Text.from_markup(f"  [bold yellow]![/bold yellow] Source map: {sm}"))
+
+    content = Group(*parts) if parts else Text("[green]No issues found[/green]")
+
+    panel = Panel(
+        content,
+        title=f"[bold white]JavaScript Analysis[/bold white]  [{grade_style}]Grade: {report.grade}[/{grade_style}]",
+        subtitle=f"{report.scripts_analyzed} scripts | {report.secret_count} secrets | {report.endpoint_count} endpoints",
+        border_style="cyan" if not report.secrets else "red",
+        box=box.ROUNDED,
+    )
+    console.print(panel)
+
+
+def print_subdomain_takeover(report) -> None:
+    grade_style = GRADE_COLORS.get(report.grade, "white")
+
+    if not report.candidates:
+        console.print(Panel(
+            "[green]No subdomain takeover risks detected[/green]",
+            title=f"[bold white]Subdomain Takeover[/bold white]  [{grade_style}]{report.grade}[/{grade_style}]",
+            subtitle=f"{report.subdomains_checked} checked",
+            border_style="green", box=box.ROUNDED,
+        ))
+        return
+
+    table = Table(box=box.SIMPLE, show_header=True, header_style="bold cyan")
+    table.add_column("Subdomain", style="bold white", width=30)
+    table.add_column("CNAME", width=30)
+    table.add_column("Provider", width=14)
+    table.add_column("Status", width=12)
+
+    for c in report.candidates[:15]:
+        status_style = "bold red" if c.vulnerable else "yellow" if c.status == "dangling" else "green"
+        table.add_row(
+            c.subdomain,
+            c.cname[:30],
+            c.provider or "-",
+            f"[{status_style}]{c.status.upper()}[/{status_style}]",
+        )
+
+    panel = Panel(
+        table,
+        title=f"[bold white]Subdomain Takeover[/bold white]  [{grade_style}]Grade: {report.grade}[/{grade_style}]",
+        subtitle=f"[bold red]{report.vulnerable_count}[/bold red] vulnerable | {report.dangling_count} dangling | {report.subdomains_checked} checked",
+        border_style="red" if report.vulnerable_count > 0 else "cyan",
+        box=box.ROUNDED,
+    )
+    console.print(panel)
+
+
+def print_graphql(report) -> None:
+    if not report.available:
+        console.print(Panel("[dim]No GraphQL endpoint found[/dim]", title="GraphQL", border_style="dim"))
+        return
+
+    grade_style = GRADE_COLORS.get(report.grade, "white")
+
+    table = Table(box=None, show_header=False, padding=(0, 2))
+    table.add_column("Key", style="bold white", width=24)
+    table.add_column("Value")
+
+    table.add_row("Endpoint", report.endpoint)
+    table.add_row("Introspection", _bool_icon(not report.introspection_enabled, invert=True))
+    table.add_row("Debug Mode", _bool_icon(not report.debug_mode, invert=True))
+    table.add_row("Field Suggestions", _bool_icon(not report.suggestions_enabled, invert=True))
+    table.add_row("Batch Queries", _bool_icon(not report.batch_queries_allowed, invert=True))
+
+    if report.query_type:
+        table.add_row("Query Type", report.query_type)
+    if report.mutation_type:
+        table.add_row("Mutation Type", report.mutation_type)
+    if report.types_exposed:
+        table.add_row("Types Exposed", f"{report.type_count} ({len(report.user_types)} custom)")
+
+    if report.issues:
+        table.add_row("", "")
+        for issue in report.issues[:5]:
+            table.add_row("[yellow]Issue[/yellow]", f"[yellow]{issue}[/yellow]")
+
+    panel = Panel(
+        table,
+        title=f"[bold white]GraphQL Security[/bold white]  [{grade_style}]Grade: {report.grade}[/{grade_style}]",
+        border_style="red" if report.introspection_enabled else "cyan",
+        box=box.ROUNDED,
+    )
+    console.print(panel)
+
+
+def print_protocols(report) -> None:
+    if not report.available:
+        console.print(Panel("[yellow]Protocol detection unavailable[/yellow]", title="Protocols", border_style="yellow"))
+        return
+
+    grade_style = GRADE_COLORS.get(report.grade, "white")
+
+    table = Table(box=None, show_header=False, padding=(0, 2))
+    table.add_column("Key", style="bold white", width=24)
+    table.add_column("Value")
+
+    table.add_row("HTTP Version", f"[bold]{report.http_version}[/bold]")
+    table.add_row("HTTP/2 Support", _bool_icon(report.http2.supported))
+    table.add_row("HTTP/3 (QUIC)", _bool_icon(report.http3.supported))
+    if report.http3.quic_version:
+        table.add_row("  QUIC Version", report.http3.quic_version)
+    table.add_row("HTTPS Redirect", _bool_icon(report.https_redirect))
+    table.add_row("HSTS", _bool_icon(report.hsts_enabled))
+
+    table.add_row("", "")
+    for check in report.security_checks:
+        icon = _bool_icon(check.passed)
+        table.add_row(check.name, icon)
+
+    if report.issues:
+        table.add_row("", "")
+        for issue in report.issues[:5]:
+            table.add_row("[yellow]Issue[/yellow]", f"[yellow]{issue}[/yellow]")
+
+    panel = Panel(
+        table,
+        title=f"[bold white]Protocol Analysis[/bold white]  [{grade_style}]Grade: {report.grade}[/{grade_style}]",
+        subtitle=f"{report.checks_passed}/{report.checks_total} checks passed",
+        border_style="cyan", box=box.ROUNDED,
+    )
+    console.print(panel)
+
+
+def print_vulnerability_predictions(report) -> None:
+    from rich.console import Group
+
+    parts = []
+
+    info_table = Table(box=None, show_header=False, padding=(0, 2))
+    info_table.add_column("Key", style="bold white", width=24)
+    info_table.add_column("Value")
+
+    vuln_colors = {"minimal": "green", "low": "blue", "moderate": "yellow", "high": "dark_orange", "critical": "red"}
+    vc = vuln_colors.get(report.vulnerability_class, "white")
+
+    info_table.add_row("Vulnerability Class", f"[bold {vc}]{report.vulnerability_class.upper()}[/bold {vc}]")
+    info_table.add_row("Overall Score", _render_risk_bar(report.overall_vulnerability_score))
+    info_table.add_row("Confidence", f"{report.confidence:.0%}")
+    info_table.add_row("Model", report.model_info.get("ensemble", "N/A"))
+    parts.append(info_table)
+
+    if report.predictions:
+        parts.append(Text(""))
+        pred_table = Table(box=box.SIMPLE, show_header=True, header_style="bold magenta")
+        pred_table.add_column("Vulnerability", style="bold white", width=24)
+        pred_table.add_column("Severity", width=10)
+        pred_table.add_column("Likelihood", width=12)
+        pred_table.add_column("Top Action", style="dim", max_width=30)
+
+        for pred in report.predictions[:8]:
+            sev_style = RISK_COLORS.get(pred.severity, "white")
+            action = pred.recommended_actions[0] if pred.recommended_actions else "-"
+            pred_table.add_row(
+                pred.category,
+                f"[{sev_style}]{pred.severity.upper()}[/{sev_style}]",
+                f"{pred.likelihood:.0%}",
+                action[:30],
+            )
+        parts.append(pred_table)
+
+    if report.attack_vectors:
+        parts.append(Text(""))
+        parts.append(Text.from_markup("[bold]Attack Vectors:[/bold]"))
+        for vec in report.attack_vectors[:6]:
+            parts.append(Text.from_markup(f"  [red]>[/red] {vec}"))
+
+    content = Group(*parts)
+
+    panel = Panel(
+        content,
+        title=f"[bold white]ML Vulnerability Prediction[/bold white]  [bold {vc}]{report.vulnerability_class.upper()}[/bold {vc}]",
+        subtitle=f"{report.prediction_count} predictions | {len(report.attack_vectors)} attack vectors",
+        border_style="magenta", box=box.ROUNDED,
+    )
+    console.print(panel)
+
+
+def print_sitemap(report) -> None:
+    if not report.available:
+        console.print(Panel("[dim]No sitemap or robots.txt found[/dim]", title="Sitemap/Robots", border_style="dim"))
+        return
+
+    grade_style = GRADE_COLORS.get(report.grade, "white")
+
+    table = Table(box=None, show_header=False, padding=(0, 2))
+    table.add_column("Key", style="bold white", width=24)
+    table.add_column("Value")
+
+    table.add_row("robots.txt", _bool_icon(report.robots_found))
+    table.add_row("sitemap.xml", _bool_icon(report.sitemap_found))
+    if report.sitemap_url:
+        table.add_row("  URL", report.sitemap_url)
+    table.add_row("Sitemap Entries", str(report.entry_count))
+    table.add_row("Disallowed Paths", str(report.disallowed_count))
+    table.add_row("Sensitive Revealed", str(len(report.sensitive_disallowed)))
+
+    if report.sensitive_disallowed:
+        table.add_row("", "")
+        for path in report.sensitive_disallowed[:5]:
+            table.add_row("[yellow]Sensitive[/yellow]", f"[yellow]{path}[/yellow]")
+
+    if report.issues:
+        table.add_row("", "")
+        for issue in report.issues[:5]:
+            table.add_row("[yellow]Issue[/yellow]", f"[yellow]{issue}[/yellow]")
+
+    panel = Panel(
+        table,
+        title=f"[bold white]Sitemap & Robots Analysis[/bold white]  [{grade_style}]Grade: {report.grade}[/{grade_style}]",
+        border_style="cyan", box=box.ROUNDED,
+    )
+    console.print(panel)
+
+
 def print_footer(scan_time: float) -> None:
     console.print()
     console.print(

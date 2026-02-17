@@ -374,3 +374,110 @@ class TestTrafficAnalyzer:
         assert "predicted_level" in ti
         valid_levels = {"minimal", "low", "moderate", "elevated"}
         assert ti["predicted_level"] in valid_levels
+
+
+# === Vulnerability Predictor Tests ===
+
+class TestVulnerabilityPredictor:
+    def test_predicted_vulnerability_dataclass(self):
+        from wimsalabim.ml.vulnerability_predictor import PredictedVulnerability
+        pv = PredictedVulnerability(
+            category="XSS", description="desc",
+            likelihood=0.8, severity="high",
+        )
+        assert pv.category == "XSS"
+        assert pv.likelihood == 0.8
+
+    def test_report_properties(self):
+        from wimsalabim.ml.vulnerability_predictor import VulnerabilityPredictionReport, PredictedVulnerability
+        report = VulnerabilityPredictionReport()
+        report.predictions = [
+            PredictedVulnerability("XSS", "d", 0.8, "critical"),
+            PredictedVulnerability("SQLi", "d", 0.5, "high"),
+        ]
+        assert report.prediction_count == 2
+        assert len(report.critical_predictions) == 1
+        assert len(report.high_predictions) == 1
+
+    def test_vulnerability_categories(self):
+        from wimsalabim.ml.vulnerability_predictor import VULNERABILITY_CATEGORIES
+        assert "injection" in VULNERABILITY_CATEGORIES
+        assert "xss" in VULNERABILITY_CATEGORIES
+        assert "auth_bypass" in VULNERABILITY_CATEGORIES
+        assert all("actions" in v for v in VULNERABILITY_CATEGORIES.values())
+
+    def test_build_features(self):
+        from wimsalabim.ml.vulnerability_predictor import _build_features
+        features = _build_features(
+            5, 2, 0.8, 0.7, 3, 1, True, False,
+            2, True, 15, 1, 3, True, 8, 200, False, 0,
+        )
+        assert features["port_count"] == 5
+        assert features["has_csp"] == 1
+        assert features["waf_detected"] == 1
+
+    def test_predict_default(self):
+        from wimsalabim.ml.vulnerability_predictor import predict_vulnerabilities
+        report = predict_vulnerabilities()
+        valid_classes = {"minimal", "low", "moderate", "high", "critical"}
+        assert report.vulnerability_class in valid_classes
+        assert 0 <= report.overall_vulnerability_score <= 1
+        assert 0 <= report.confidence <= 1
+
+    def test_predict_high_risk(self):
+        from wimsalabim.ml.vulnerability_predictor import predict_vulnerabilities
+        report = predict_vulnerabilities(
+            port_count=15, risky_ports=5,
+            tls_score=0.15, headers_score=0.15,
+            headers_missing=8, info_leaks=4,
+            has_csp=False, cors_reflects=True,
+            cookie_issues=5, waf_detected=False,
+            sensitive_paths=3, cve_count=5,
+            js_secrets=3,
+        )
+        assert report.prediction_count > 3
+        assert report.overall_vulnerability_score > 0.3
+
+    def test_model_info(self):
+        from wimsalabim.ml.vulnerability_predictor import predict_vulnerabilities
+        report = predict_vulnerabilities()
+        assert "ensemble" in report.model_info
+        assert "GradientBoosting" in report.model_info["ensemble"]
+        assert "MLP" in report.model_info["ensemble"]
+        assert report.model_info["training_samples"] == 400
+
+    def test_attack_vectors(self):
+        from wimsalabim.ml.vulnerability_predictor import predict_vulnerabilities
+        report = predict_vulnerabilities(
+            port_count=10, risky_ports=3,
+            waf_detected=False, cve_count=2,
+        )
+        assert len(report.attack_vectors) > 0
+
+    def test_rule_based_xss(self):
+        from wimsalabim.ml.vulnerability_predictor import _rule_based_predictions, VulnerabilityPredictionReport
+        report = VulnerabilityPredictionReport()
+        features = {
+            "port_count": 2, "risky_ports": 0, "tls_score": 0.8,
+            "headers_score": 0.5, "headers_missing": 5, "info_leaks": 0,
+            "has_csp": 0, "cors_reflects": 0, "cookie_issues": 0,
+            "waf_detected": 1, "subdomain_count": 0, "sensitive_paths": 0,
+            "cve_count": 0, "cloud_hosted": 0, "tech_count": 5,
+            "response_time": 0.1, "has_graphql": 0, "js_secrets": 0,
+        }
+        _rule_based_predictions(features, report)
+        assert any("Cross-Site Scripting" in p.category for p in report.predictions)
+
+    def test_rule_based_misconfig(self):
+        from wimsalabim.ml.vulnerability_predictor import _rule_based_predictions, VulnerabilityPredictionReport
+        report = VulnerabilityPredictionReport()
+        features = {
+            "port_count": 12, "risky_ports": 4, "tls_score": 0.8,
+            "headers_score": 0.8, "headers_missing": 2, "info_leaks": 0,
+            "has_csp": 1, "cors_reflects": 0, "cookie_issues": 0,
+            "waf_detected": 1, "subdomain_count": 0, "sensitive_paths": 0,
+            "cve_count": 0, "cloud_hosted": 0, "tech_count": 5,
+            "response_time": 0.1, "has_graphql": 0, "js_secrets": 0,
+        }
+        _rule_based_predictions(features, report)
+        assert any("Misconfiguration" in p.category for p in report.predictions)

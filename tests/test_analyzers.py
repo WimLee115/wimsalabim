@@ -687,3 +687,315 @@ class TestPerformanceAnalyzer:
         route_score = {"A": 95}.get(report.route.grade, 50)
         avg = (enc_score + route_score) / 2
         assert avg >= 90
+
+
+# === Security.txt Tests ===
+
+class TestSecurityTxt:
+    def test_report_defaults(self):
+        from wimsalabim.analyzers.security_txt import SecurityTxtReport
+        report = SecurityTxtReport(target="test.com")
+        assert not report.found
+        assert report.grade == "N/A"
+        assert report.field_count == 0
+
+    def test_required_fields_property(self):
+        from wimsalabim.analyzers.security_txt import SecurityTxtReport
+        report = SecurityTxtReport(target="t", has_contact=True, has_expires=True)
+        assert report.required_fields_present
+
+    def test_required_fields_missing(self):
+        from wimsalabim.analyzers.security_txt import SecurityTxtReport
+        report = SecurityTxtReport(target="t", has_contact=True, has_expires=False)
+        assert not report.required_fields_present
+
+    def test_looks_like_security_txt(self):
+        from wimsalabim.analyzers.security_txt import _looks_like_security_txt
+        assert _looks_like_security_txt("Contact: test@example.com")
+        assert _looks_like_security_txt("Expires: 2026-01-01")
+        assert not _looks_like_security_txt("<html>Not found</html>")
+
+    def test_check_pgp_signature(self):
+        from wimsalabim.analyzers.security_txt import _check_pgp_signature, SecurityTxtReport
+        report = SecurityTxtReport(target="t")
+        _check_pgp_signature("-----BEGIN PGP SIGNED MESSAGE-----\nContent", report)
+        assert report.signed
+
+    def test_parse_fields(self):
+        from wimsalabim.analyzers.security_txt import _parse_fields, SecurityTxtReport
+        report = SecurityTxtReport(target="t")
+        content = "Contact: mailto:sec@test.com\nExpires: 2027-01-01\nEncryption: https://test.com/pgp.txt"
+        _parse_fields(content, report)
+        assert report.has_contact
+        assert report.has_expires
+        assert report.has_encryption
+        assert report.field_count == 3
+
+    def test_validate_fields_missing_required(self):
+        from wimsalabim.analyzers.security_txt import _validate_fields, SecurityTxtReport
+        report = SecurityTxtReport(target="t")
+        _validate_fields(report)
+        assert any("Contact" in i for i in report.issues)
+        assert any("Expires" in i for i in report.issues)
+
+    def test_calculate_grade_found(self):
+        from wimsalabim.analyzers.security_txt import _calculate_grade, SecurityTxtReport
+        report = SecurityTxtReport(target="t", found=True, has_contact=True, has_expires=True, has_encryption=True, has_canonical=True, signed=True)
+        _calculate_grade(report)
+        assert report.grade == "A"
+
+    def test_calculate_grade_not_found(self):
+        from wimsalabim.analyzers.security_txt import _calculate_grade, SecurityTxtReport
+        report = SecurityTxtReport(target="t", found=False)
+        _calculate_grade(report)
+        assert report.grade == "F"
+
+    def test_known_fields(self):
+        from wimsalabim.analyzers.security_txt import ALL_KNOWN_FIELDS
+        assert "Contact" in ALL_KNOWN_FIELDS
+        assert "Expires" in ALL_KNOWN_FIELDS
+        assert "Encryption" in ALL_KNOWN_FIELDS
+
+
+# === JavaScript Analyzer Tests ===
+
+class TestJSAnalyzer:
+    def test_report_defaults(self):
+        from wimsalabim.analyzers.js_analyzer import JSAnalysisReport
+        report = JSAnalysisReport(target="test.com")
+        assert not report.available
+        assert report.secret_count == 0
+        assert report.endpoint_count == 0
+
+    def test_secret_finding_dataclass(self):
+        from wimsalabim.analyzers.js_analyzer import SecretFinding
+        sf = SecretFinding(secret_type="critical", pattern_name="AWS", matched_value="AKIA****", source_url="app.js", severity="critical")
+        assert sf.severity == "critical"
+
+    def test_critical_secrets_property(self):
+        from wimsalabim.analyzers.js_analyzer import JSAnalysisReport, SecretFinding
+        report = JSAnalysisReport(target="t")
+        report.secrets = [
+            SecretFinding("critical", "AWS Key", "****", "a.js", severity="critical"),
+            SecretFinding("medium", "Generic", "****", "b.js", severity="medium"),
+        ]
+        assert len(report.critical_secrets) == 1
+
+    def test_secret_patterns_defined(self):
+        from wimsalabim.analyzers.js_analyzer import SECRET_PATTERNS
+        names = [p[0] for p in SECRET_PATTERNS]
+        assert "AWS Access Key" in names
+        assert "GitHub Token" in names
+        assert "Private Key" in names
+        assert "Stripe Secret" in names
+
+    def test_endpoint_patterns_defined(self):
+        from wimsalabim.analyzers.js_analyzer import ENDPOINT_PATTERNS
+        assert len(ENDPOINT_PATTERNS) >= 5
+
+    def test_scan_secrets_aws(self):
+        from wimsalabim.analyzers.js_analyzer import _scan_secrets, JSAnalysisReport
+        report = JSAnalysisReport(target="t")
+        content = 'var key = "AKIAIOSFODNN7EXAMPLE";'
+        _scan_secrets(content, "test.js", report)
+        assert report.secret_count > 0
+
+    def test_extract_endpoints(self):
+        from wimsalabim.analyzers.js_analyzer import _extract_endpoints, JSAnalysisReport
+        report = JSAnalysisReport(target="t")
+        content = '''fetch("/api/v1/users"); axios.get("/api/items");'''
+        _extract_endpoints(content, "app.js", report)
+        assert report.endpoint_count >= 2
+
+    def test_calculate_grade_clean(self):
+        from wimsalabim.analyzers.js_analyzer import _calculate_grade, JSAnalysisReport
+        report = JSAnalysisReport(target="t", available=True)
+        _calculate_grade(report)
+        assert report.grade == "A"
+
+    def test_calculate_grade_secrets(self):
+        from wimsalabim.analyzers.js_analyzer import _calculate_grade, JSAnalysisReport, SecretFinding
+        report = JSAnalysisReport(target="t", available=True)
+        report.secrets = [SecretFinding("critical", "Key", "****", "a.js", severity="critical")] * 3
+        _calculate_grade(report)
+        assert report.grade in ("D", "F")
+
+
+# === Subdomain Takeover Tests ===
+
+class TestSubdomainTakeover:
+    def test_report_defaults(self):
+        from wimsalabim.analyzers.subdomain_takeover import SubdomainTakeoverReport
+        report = SubdomainTakeoverReport(target="test.com")
+        assert report.vulnerable_count == 0
+        assert report.dangling_count == 0
+
+    def test_takeover_candidate(self):
+        from wimsalabim.analyzers.subdomain_takeover import TakeoverCandidate
+        tc = TakeoverCandidate(subdomain="old.test.com", cname="old.herokuapp.com", vulnerable=True)
+        assert tc.vulnerable
+
+    def test_signatures_defined(self):
+        from wimsalabim.analyzers.subdomain_takeover import TAKEOVER_SIGNATURES
+        assert "github.io" in TAKEOVER_SIGNATURES
+        assert "herokuapp.com" in TAKEOVER_SIGNATURES
+        assert "s3.amazonaws.com" in TAKEOVER_SIGNATURES
+        assert "azurewebsites.net" in TAKEOVER_SIGNATURES
+
+    def test_get_default_subdomains(self):
+        from wimsalabim.analyzers.subdomain_takeover import _get_default_subdomains
+        subs = _get_default_subdomains("test.com")
+        assert "www.test.com" in subs
+        assert "api.test.com" in subs
+        assert len(subs) > 10
+
+    def test_calculate_grade_clean(self):
+        from wimsalabim.analyzers.subdomain_takeover import _calculate_grade, SubdomainTakeoverReport
+        report = SubdomainTakeoverReport(target="t")
+        report.subdomains_checked = 20
+        _calculate_grade(report)
+        assert report.grade == "A"
+
+    def test_calculate_grade_vulnerable(self):
+        from wimsalabim.analyzers.subdomain_takeover import _calculate_grade, SubdomainTakeoverReport, TakeoverCandidate
+        report = SubdomainTakeoverReport(target="t")
+        report.subdomains_checked = 20
+        report.vulnerable = [TakeoverCandidate(subdomain="a.t", vulnerable=True)] * 4
+        _calculate_grade(report)
+        assert report.grade == "F"
+
+
+# === GraphQL Tests ===
+
+class TestGraphQL:
+    def test_report_defaults(self):
+        from wimsalabim.analyzers.graphql import GraphQLReport
+        report = GraphQLReport(target="test.com")
+        assert not report.available
+        assert not report.introspection_enabled
+        assert report.type_count == 0
+
+    def test_user_types_filter(self):
+        from wimsalabim.analyzers.graphql import GraphQLReport, GraphQLType
+        report = GraphQLReport(target="t")
+        report.types_exposed = [
+            GraphQLType("User", "OBJECT", 5),
+            GraphQLType("__Schema", "OBJECT", 3),
+            GraphQLType("__Type", "OBJECT", 2),
+        ]
+        assert len(report.user_types) == 1
+
+    def test_common_endpoints(self):
+        from wimsalabim.analyzers.graphql import COMMON_ENDPOINTS
+        assert "/graphql" in COMMON_ENDPOINTS
+        assert "/api/graphql" in COMMON_ENDPOINTS
+
+    def test_is_graphql_response(self):
+        from wimsalabim.analyzers.graphql import _is_graphql_response
+        assert _is_graphql_response('{"data": {"__typename": "Query"}}')
+        assert _is_graphql_response('{"errors": []}')
+        assert not _is_graphql_response("<html>Not found</html>")
+        assert not _is_graphql_response("invalid json")
+
+    def test_calculate_grade_clean(self):
+        from wimsalabim.analyzers.graphql import _calculate_grade, GraphQLReport
+        report = GraphQLReport(target="t", available=True)
+        _calculate_grade(report)
+        assert report.grade == "A"
+
+    def test_calculate_grade_introspection(self):
+        from wimsalabim.analyzers.graphql import _calculate_grade, GraphQLReport
+        report = GraphQLReport(target="t", available=True, introspection_enabled=True, debug_mode=True)
+        _calculate_grade(report)
+        assert report.grade in ("C", "D", "F")
+
+
+# === HTTP/2 Protocol Tests ===
+
+class TestHTTP2:
+    def test_report_defaults(self):
+        from wimsalabim.analyzers.http2 import ProtocolReport
+        report = ProtocolReport(target="test.com")
+        assert not report.available
+        assert report.grade == "N/A"
+
+    def test_http2_result_defaults(self):
+        from wimsalabim.analyzers.http2 import HTTP2Result
+        h2 = HTTP2Result()
+        assert not h2.supported
+
+    def test_http3_result_defaults(self):
+        from wimsalabim.analyzers.http2 import HTTP3Result
+        h3 = HTTP3Result()
+        assert not h3.supported
+
+    def test_checks_properties(self):
+        from wimsalabim.analyzers.http2 import ProtocolReport, ProtocolSecurityCheck
+        report = ProtocolReport(target="t")
+        report.security_checks = [
+            ProtocolSecurityCheck("Test1", passed=True, description="d"),
+            ProtocolSecurityCheck("Test2", passed=False, description="d"),
+        ]
+        assert report.checks_passed == 1
+        assert report.checks_total == 2
+
+    def test_calculate_grade_full(self):
+        from wimsalabim.analyzers.http2 import _calculate_grade, ProtocolReport, HTTP2Result, HTTP3Result, ProtocolSecurityCheck
+        report = ProtocolReport(
+            target="t", available=True,
+            http2=HTTP2Result(supported=True),
+            http3=HTTP3Result(supported=True),
+            https_redirect=True, hsts_enabled=True,
+        )
+        report.security_checks = [ProtocolSecurityCheck("T", passed=True)] * 6
+        _calculate_grade(report)
+        assert report.grade == "A"
+
+    def test_calculate_grade_unavailable(self):
+        from wimsalabim.analyzers.http2 import _calculate_grade, ProtocolReport
+        report = ProtocolReport(target="t", available=False)
+        _calculate_grade(report)
+        assert report.grade == "N/A"
+
+
+# === Sitemap/Robots Tests ===
+
+class TestSitemap:
+    def test_report_defaults(self):
+        from wimsalabim.analyzers.sitemap import SitemapReport
+        report = SitemapReport(target="test.com")
+        assert not report.available
+        assert report.entry_count == 0
+        assert report.disallowed_count == 0
+
+    def test_parse_robots(self):
+        from wimsalabim.analyzers.sitemap import _parse_robots, SitemapReport
+        report = SitemapReport(target="t")
+        content = "User-agent: *\nDisallow: /admin/\nDisallow: /private/\nSitemap: https://t/sitemap.xml"
+        _parse_robots(content, report)
+        assert len(report.disallowed_paths) == 2
+        assert "/admin/" in report.disallowed_paths
+        assert len(report.sitemap_references) == 1
+
+    def test_sensitive_path_patterns(self):
+        from wimsalabim.analyzers.sitemap import SENSITIVE_PATH_PATTERNS
+        assert any("/admin" in p for p in SENSITIVE_PATH_PATTERNS)
+        assert any("/api" in p for p in SENSITIVE_PATH_PATTERNS)
+
+    def test_analyze_findings_sensitive(self):
+        from wimsalabim.analyzers.sitemap import _analyze_findings, SitemapReport
+        report = SitemapReport(target="t", robots_found=True, sitemap_found=True)
+        report.disallowed_paths = ["/admin/secret", "/public/stuff"]
+        _analyze_findings(report)
+        assert len(report.sensitive_disallowed) >= 1
+
+    def test_calculate_grade_clean(self):
+        from wimsalabim.analyzers.sitemap import _calculate_grade, SitemapReport
+        report = SitemapReport(target="t", available=True, robots_found=True, sitemap_found=True)
+        _calculate_grade(report)
+        assert report.grade == "A"
+
+    def test_sitemap_entry_dataclass(self):
+        from wimsalabim.analyzers.sitemap import SitemapEntry
+        entry = SitemapEntry(url="https://test.com/page", lastmod="2026-01-01")
+        assert entry.url == "https://test.com/page"

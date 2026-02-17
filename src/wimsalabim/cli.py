@@ -39,6 +39,12 @@ warnings.filterwarnings("ignore")
 @click.option("--no-network", is_flag=True, help="Skip network quality analysis")
 @click.option("--no-leaks", is_flag=True, help="Skip leak detection")
 @click.option("--no-perf", is_flag=True, help="Skip performance analysis")
+@click.option("--no-sectxt", is_flag=True, help="Skip security.txt check")
+@click.option("--no-js", is_flag=True, help="Skip JavaScript analysis")
+@click.option("--no-takeover", is_flag=True, help="Skip subdomain takeover check")
+@click.option("--no-graphql", is_flag=True, help="Skip GraphQL analysis")
+@click.option("--no-http2", is_flag=True, help="Skip HTTP/2 & HTTP/3 detection")
+@click.option("--no-sitemap", is_flag=True, help="Skip sitemap/robots analysis")
 @click.option("--ports", "-p", default=None, help="Custom port list (comma-separated)")
 @click.option("--timeout", "-t", default=1.5, help="Port scan timeout in seconds")
 @click.option("--version", "-v", is_flag=True, help="Show version")
@@ -64,6 +70,12 @@ def main(
     no_network: bool,
     no_leaks: bool,
     no_perf: bool,
+    no_sectxt: bool,
+    no_js: bool,
+    no_takeover: bool,
+    no_graphql: bool,
+    no_http2: bool,
+    no_sitemap: bool,
     ports: str | None,
     timeout: float,
     version: bool,
@@ -88,6 +100,7 @@ def main(
         no_dns = no_email = no_whois = no_subdomains = True
         no_waf = no_dirs = no_cors = no_cookies = no_cloud = no_cve = True
         no_network = no_leaks = no_perf = True
+        no_sectxt = no_js = no_takeover = no_graphql = no_http2 = no_sitemap = True
 
     start_time = time.monotonic()
     results = {}
@@ -258,6 +271,55 @@ def main(
             perf_report = analyze_performance(target)
             results["performance"] = perf_report
 
+        # Security.txt
+        sectxt_report = None
+        if not no_sectxt:
+            _status("Security.txt check", json_output)
+            from wimsalabim.analyzers.security_txt import analyze_security_txt
+            sectxt_report = analyze_security_txt(target)
+            results["security_txt"] = sectxt_report
+
+        # JavaScript Analysis
+        js_report = None
+        if not no_js:
+            _status("JavaScript secrets scan", json_output)
+            from wimsalabim.analyzers.js_analyzer import analyze_js
+            js_report = analyze_js(target)
+            results["js_analysis"] = js_report
+
+        # Subdomain Takeover
+        takeover_report = None
+        if not no_takeover:
+            _status("Subdomain takeover check", json_output)
+            from wimsalabim.analyzers.subdomain_takeover import check_subdomain_takeover
+            takeover_subs = [s.hostname for s in subdomain_report.subdomains_found] if subdomain_report else None
+            takeover_report = check_subdomain_takeover(target, subdomains=takeover_subs)
+            results["subdomain_takeover"] = takeover_report
+
+        # GraphQL Analysis
+        graphql_report = None
+        if not no_graphql:
+            _status("GraphQL security check", json_output)
+            from wimsalabim.analyzers.graphql import analyze_graphql
+            graphql_report = analyze_graphql(target)
+            results["graphql"] = graphql_report
+
+        # HTTP/2 & HTTP/3 Protocol Detection
+        http2_report = None
+        if not no_http2:
+            _status("Protocol detection (HTTP/2, HTTP/3)", json_output)
+            from wimsalabim.analyzers.http2 import analyze_protocols
+            http2_report = analyze_protocols(target)
+            results["protocols"] = http2_report
+
+        # Sitemap & Robots Analysis
+        sitemap_report = None
+        if not no_sitemap:
+            _status("Sitemap & robots.txt analysis", json_output)
+            from wimsalabim.analyzers.sitemap import analyze_sitemap
+            sitemap_report = analyze_sitemap(target)
+            results["sitemap"] = sitemap_report
+
         # ML/AI Analysis
         anomaly_report = None
         threat_report = None
@@ -352,6 +414,31 @@ def main(
             )
             results["traffic"] = traffic_report
 
+            _status("ML vulnerability prediction", json_output)
+            from wimsalabim.ml.vulnerability_predictor import predict_vulnerabilities
+            vuln_report = predict_vulnerabilities(
+                port_count=port_report.open_count if port_report else 0,
+                risky_ports=len(port_report.risky_ports) if port_report else 0,
+                tls_score=_grade_to_float(tls_report.grade if tls_report else "N/A"),
+                headers_score=_grade_to_float(headers_report.grade if headers_report else "N/A"),
+                headers_missing=headers_report.missing_count if headers_report else 0,
+                info_leaks=len(headers_report.info_leaks) if headers_report else 0,
+                has_csp=any(h.name == "Content-Security-Policy" for h in headers_report.headers_present) if headers_report else False,
+                cors_reflects=cors_report.reflects_origin if cors_report else False,
+                cookie_issues=len(cookie_report.issues) if cookie_report else 0,
+                waf_detected=waf_report.detected if waf_report else False,
+                subdomain_count=subdomain_report.found_count if subdomain_report else 0,
+                sensitive_paths=dir_report.sensitive_count if dir_report else 0,
+                cve_count=cve_report.total_cves if cve_report else 0,
+                cloud_hosted=cloud_report.is_cloud_hosted if cloud_report else False,
+                tech_count=tech_report.tech_count if tech_report else 0,
+                has_graphql=graphql_report.available if graphql_report else False,
+                js_secrets=js_report.secret_count if js_report else 0,
+            )
+            results["vulnerability_prediction"] = vuln_report
+        else:
+            vuln_report = None
+
         # Scoring
         _status("Calculating scores", json_output)
         from wimsalabim.analyzers.scoring import calculate_scores
@@ -384,8 +471,10 @@ def main(
             email_report, tech_report, whois_report, subdomain_report,
             waf_report, dir_report, cors_report, cookie_report,
             cloud_report, cve_report, network_report, leak_report,
-            perf_report, anomaly_report, threat_report,
-            traffic_report, risk_assessment, scoring_report,
+            perf_report, sectxt_report, js_report, takeover_report,
+            graphql_report, http2_report, sitemap_report,
+            anomaly_report, threat_report,
+            traffic_report, vuln_report, risk_assessment, scoring_report,
         )
 
 
@@ -395,8 +484,10 @@ def _output_rich(
     email_report, tech_report, whois_report, subdomain_report,
     waf_report, dir_report, cors_report, cookie_report,
     cloud_report, cve_report, network_report, leak_report,
-    perf_report, anomaly_report, threat_report,
-    traffic_report, risk_assessment, scoring_report,
+    perf_report, sectxt_report, js_report, takeover_report,
+    graphql_report, http2_report, sitemap_report,
+    anomaly_report, threat_report,
+    traffic_report, vuln_report, risk_assessment, scoring_report,
 ):
     console.print()
 
@@ -434,12 +525,26 @@ def _output_rich(
         display.print_leaks(leak_report)
     if perf_report:
         display.print_performance(perf_report)
+    if sectxt_report:
+        display.print_security_txt(sectxt_report)
+    if js_report:
+        display.print_js_analysis(js_report)
+    if takeover_report:
+        display.print_subdomain_takeover(takeover_report)
+    if graphql_report:
+        display.print_graphql(graphql_report)
+    if http2_report:
+        display.print_protocols(http2_report)
+    if sitemap_report:
+        display.print_sitemap(sitemap_report)
     if anomaly_report:
         display.print_anomalies(anomaly_report)
     if threat_report:
         display.print_threats(threat_report)
     if traffic_report:
         display.print_traffic_analysis(traffic_report)
+    if vuln_report:
+        display.print_vulnerability_predictions(vuln_report)
     if risk_assessment:
         display.print_risk_assessment(risk_assessment)
 
