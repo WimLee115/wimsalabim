@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sys
 import time
 import warnings
+from datetime import datetime
+from pathlib import Path
 
 import click
 from rich.console import Console
@@ -45,6 +48,8 @@ warnings.filterwarnings("ignore")
 @click.option("--no-graphql", is_flag=True, help="Skip GraphQL analysis")
 @click.option("--no-http2", is_flag=True, help="Skip HTTP/2 & HTTP/3 detection")
 @click.option("--no-sitemap", is_flag=True, help="Skip sitemap/robots analysis")
+@click.option("--report-dir", "-r", default=None, help="Directory to save reports (default: ~/.wimsalabim/reports)")
+@click.option("--no-report", is_flag=True, help="Don't save report to disk")
 @click.option("--ports", "-p", default=None, help="Custom port list (comma-separated)")
 @click.option("--timeout", "-t", default=1.5, help="Port scan timeout in seconds")
 @click.option("--version", "-v", is_flag=True, help="Show version")
@@ -76,6 +81,8 @@ def main(
     no_graphql: bool,
     no_http2: bool,
     no_sitemap: bool,
+    report_dir: str | None,
+    no_report: bool,
     ports: str | None,
     timeout: float,
     version: bool,
@@ -462,6 +469,9 @@ def main(
 
     elapsed = time.monotonic() - start_time
 
+    if not no_report:
+        report_path = _save_report(target, results, elapsed, report_dir, json_output)
+
     if json_output:
         _output_json(results, elapsed)
     else:
@@ -476,6 +486,49 @@ def main(
             anomaly_report, threat_report,
             traffic_report, vuln_report, risk_assessment, scoring_report,
         )
+
+    if not no_report and report_path:
+        if not json_output:
+            console.print(f"  [dim]Report saved to:[/dim] [bold cyan]{report_path}[/bold cyan]")
+            console.print()
+
+
+def _save_report(target: str, results: dict, elapsed: float, report_dir: str | None, json_output: bool) -> str:
+    import dataclasses
+
+    base_dir = Path(report_dir) if report_dir else Path.home() / ".wimsalabim" / "reports"
+    base_dir.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_target = target.replace(".", "_").replace("/", "_").replace(":", "_")
+    filename = f"{safe_target}_{timestamp}.json"
+    filepath = base_dir / filename
+
+    def _serialize(obj):
+        if dataclasses.is_dataclass(obj):
+            return dataclasses.asdict(obj)
+        if isinstance(obj, set):
+            return list(obj)
+        return str(obj)
+
+    output = {
+        "version": __version__,
+        "watermark": "rootmap:WimLee115",
+        "target": target,
+        "timestamp": datetime.now().isoformat(),
+        "scan_time": round(elapsed, 2),
+        "results": {},
+    }
+
+    for key, report in results.items():
+        try:
+            output["results"][key] = _serialize(report)
+        except Exception:
+            output["results"][key] = str(report)
+
+    filepath.write_text(json.dumps(output, indent=2, default=str), encoding="utf-8")
+
+    return str(filepath)
 
 
 def _output_rich(
