@@ -22,7 +22,7 @@ warnings.filterwarnings("ignore")
 
 
 @click.command()
-@click.argument("target")
+@click.argument("target", required=False, default=None)
 @click.option("--json-output", "-j", is_flag=True, help="Output results as JSON")
 @click.option("--no-ports", is_flag=True, help="Skip port scanning")
 @click.option("--no-tls", is_flag=True, help="Skip TLS analysis")
@@ -55,7 +55,7 @@ warnings.filterwarnings("ignore")
 @click.option("--version", "-v", is_flag=True, help="Show version")
 @click.option("--quick", "-q", is_flag=True, help="Quick scan (ports + TLS + headers only)")
 def main(
-    target: str,
+    target: str | None,
     json_output: bool,
     no_ports: bool,
     no_tls: bool,
@@ -94,6 +94,10 @@ def main(
     """
     if version:
         console.print(f"wimsalabim v{__version__}")
+        sys.exit(0)
+
+    if not target:
+        click.echo(click.get_current_context().get_help())
         sys.exit(0)
 
     target = target.strip().lower()

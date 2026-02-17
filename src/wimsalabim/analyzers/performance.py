@@ -66,7 +66,15 @@ def analyze_performance(target: str) -> PerformanceReport:
     if report.encryption.total_setup_ms > 0 or report.route.hop_count > 0:
         report.available = True
 
-    report.issues = report.encryption_issues() if hasattr(report, 'encryption_issues') else []
+    enc = report.encryption
+    enc_issues = []
+    if enc.tls_handshake_ms > 500:
+        enc_issues.append(f"Slow TLS handshake: {enc.tls_handshake_ms}ms")
+    if enc.protocol and enc.protocol < "TLSv1.2":
+        enc_issues.append(f"Weak TLS protocol: {enc.protocol}")
+    if enc.total_setup_ms > 1000:
+        enc_issues.append(f"High connection setup time: {enc.total_setup_ms}ms")
+    report.issues = enc_issues
     report.issues.extend(report.route.issues)
 
     enc_score = {"A": 95, "B": 80, "C": 60, "D": 40, "F": 15, "N/A": 50}.get(report.encryption.grade, 50)

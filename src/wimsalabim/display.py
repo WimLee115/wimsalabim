@@ -10,6 +10,8 @@ from rich.columns import Columns
 from rich.tree import Tree
 from rich import box
 
+from wimsalabim import __version__
+
 console = Console()
 
 BANNER = r"""
@@ -1160,7 +1162,7 @@ def print_footer(scan_time: float) -> None:
     console.print()
     console.print(
         f"  [dim]Scanned in {scan_time:.2f}s | {WATERMARK} | "
-        f"Wimsalabim v0.1.0 | github.com/WimLee115/wimsalabim[/dim]"
+        f"Wimsalabim v{__version__} | github.com/WimLee115/wimsalabim[/dim]"
     )
     console.print()
 
