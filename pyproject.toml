@@ -1,0 +1,72 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "wimsalabim"
+version = "0.1.0"
+description = "Instant beautiful security reconnaissance for any domain - ML/AI-powered network intelligence"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [
+    { name = "WimLee115" },
+]
+keywords = [
+    "security",
+    "reconnaissance",
+    "network",
+    "scanner",
+    "pentest",
+    "cybersecurity",
+    "osint",
+    "ml",
+    "ai",
+    "cli",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: System :: Networking",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "rich>=13.0",
+    "click>=8.0",
+    "dnspython>=2.4",
+    "python-whois>=0.9",
+    "requests>=2.28",
+    "numpy>=1.24",
+    "scikit-learn>=1.3",
+]
+
+[project.scripts]
+wimsalabim = "wimsalabim.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/WimLee115/wimsalabim"
+Repository = "https://github.com/WimLee115/wimsalabim"
+Issues = "https://github.com/WimLee115/wimsalabim/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wimsalabim"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
