@@ -9,10 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **TLS analyzer test suite** (`tests/test_analyzer_tls.py`, 9 cases) using
+  an in-process `trustme`-minted CA + `asyncio.start_server` TLS endpoint.
+  Covers happy-path, expiring-soon (critical), expiring-warning (medium),
+  metadata fields, connection-refused, handshake-timeout, no-peer-cert
+  edge case, grade calculation, and DNS-resolution failure. **Coverage of
+  `analyzers/tls.py` lifted from 27 % → 95 %.**
+- **Ports analyzer test suite** (`tests/test_analyzer_ports.py`, 11 cases)
+  using a fixture that fakes `_is_open` so each test declares which ports
+  are open. Plus one real-loopback-socket test for the `_is_open` helper.
+  Covers all grade bands, severity classification, finding metadata,
+  decorator-imprinted class attributes, and the defensive critical-grade
+  branch. **Coverage of `analyzers/ports.py` lifted from 23 % → 100 %.**
+- `trustme` added to dev-dependencies.
+
+### Changed
+- `[tool.mypy]` overrides for `tests.*` relax `operator`, `union-attr`,
+  `arg-type`, etc. — the pydantic union-typed `metadata: dict[str, str |
+  int | float | bool]` field would otherwise force a wall of `cast()` /
+  `isinstance()` calls in tests with no safety win.
+
 ### Planned
-- Mock TLS server fixture to lift `tls.py` coverage.
-- Socket-mock fixture to lift `ports.py` coverage.
 - Periodic re-verification of authorization for long-running `watch` sessions.
+- Mutation testing (mutmut) — Q3 2026.
+- Atheris fuzzing on parsers (cert, headers) — Q3 2026.
 
 ---
 

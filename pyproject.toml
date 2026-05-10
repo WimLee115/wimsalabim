@@ -48,6 +48,7 @@ dev = [
     "pytest-asyncio>=0.23",
     "pytest-cov>=4.1",
     "respx>=0.21",
+    "trustme>=1.1",
     "ruff>=0.4",
     "mypy>=1.10",
     "types-requests",
@@ -121,8 +122,22 @@ no_implicit_optional = true
 files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
-module = ["whois.*", "dns.*"]
+module = ["whois.*", "dns.*", "trustme.*"]
 ignore_missing_imports = true
+
+# Tests can be more relaxed: pydantic union-typed metadata-fields require a
+# lot of `cast`/`isinstance` boilerplate that doesn't add safety in test code.
+[[tool.mypy.overrides]]
+module = "tests.*"
+disable_error_code = [
+    "operator",
+    "union-attr",
+    "arg-type",
+    "attr-defined",
+    "no-any-return",
+    "unused-ignore",
+    "comparison-overlap",
+]
 
 # ── Coverage ────────────────────────────────────────────────────────────
 [tool.coverage.run]
