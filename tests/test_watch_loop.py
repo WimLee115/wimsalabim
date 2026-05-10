@@ -22,8 +22,9 @@ def _now(offset_seconds: int = 0) -> datetime:
     return datetime(2026, 5, 10, 12, 0, 0, tzinfo=timezone.utc) + timedelta(seconds=offset_seconds)
 
 
-def _scan(*, target: str = "example.com", grade: str, finding_id: str | None,
-          ts_offset: int = 0) -> ScanReport:
+def _scan(
+    *, target: str = "example.com", grade: str, finding_id: str | None, ts_offset: int = 0
+) -> ScanReport:
     src = Source(kind="tls", target=target, timestamp=_now(ts_offset))
     findings = []
     if finding_id:
