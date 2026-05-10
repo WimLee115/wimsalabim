@@ -7,7 +7,9 @@ The CLI is intentionally slim: parsing, configuration, hand-off to
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
+import signal
 import sys
 from pathlib import Path
 
@@ -35,9 +37,11 @@ from wimsalabim.core.crypto import (
 from wimsalabim.core.crypto import verify as verify_signature
 from wimsalabim.core.orchestrator import Orchestrator, OrchestratorConfig
 from wimsalabim.core.registry import all_analyzers
-from wimsalabim.core.schema import ScanReport
+from wimsalabim.core.schema import Authorization, ScanReport
 from wimsalabim.display import render_markdown, render_rich, render_sarif
 from wimsalabim.risk.heuristic import HeuristicRiskEngine
+from wimsalabim.watch import BaselineStore, Diff, watch_loop
+from wimsalabim.watch.loop import OnIteration, ScanFn
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
@@ -165,6 +169,216 @@ def scan(
 
 def _sign_bytes(kp: SigningKeyPair, data: bytes) -> str:
     return sign(kp, data)
+
+
+# ─── watch ───────────────────────────────────────────────────────────────
+@main.command()
+@click.argument("targets", nargs=-1, required=True)
+@click.option(
+    "--interval",
+    "interval_s",
+    default=3600.0,
+    show_default=True,
+    type=click.FloatRange(min=1.0),
+    help="Seconds between scan rounds.",
+)
+@click.option(
+    "--db",
+    "db_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=Path.home() / ".wimsalabim" / "watch.sqlite",
+    show_default=True,
+    help="SQLite file used as baseline store.",
+)
+@click.option("--once", is_flag=True, help="Run a single round and exit.")
+@click.option(
+    "--diff-only", is_flag=True, help="Only print rounds with a meaningful diff."
+)
+@click.option("--enable", "-e", multiple=True, help="Enable only these analyzers (repeatable).")
+@click.option("--disable", "-d", multiple=True, help="Disable these analyzers (repeatable).")
+@click.option("--via-tor", is_flag=True, help="Route HTTP via local Tor SOCKS5.")
+@click.option("--offline", is_flag=True, help="Disable all outbound network.")
+@click.option("--show-pii", is_flag=True, help="Do not redact PII (use only on data you own).")
+@click.option(
+    "--allow-intrusive", is_flag=True, help="Permit intrusive analyzers (extra confirmation)."
+)
+@click.option(
+    "--auth-self-owned",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Path to self-owned domains manifest (one host per line).",
+)
+@click.option(
+    "--auth-dns-txt",
+    "auth_dns_pubkey",
+    default=None,
+    help="Verify _wimsalabim-auth.<target> TXT contains this base64 pubkey.",
+)
+@click.option(
+    "--auth-well-known",
+    "auth_well_known_pubkey",
+    default=None,
+    help="Verify /.well-known/wimsalabim-auth.txt declares this pubkey.",
+)
+@click.option("--verbose/--quiet", default=False)
+def watch(
+    targets: tuple[str, ...],
+    interval_s: float,
+    db_path: Path,
+    once: bool,
+    diff_only: bool,
+    enable: tuple[str, ...],
+    disable: tuple[str, ...],
+    via_tor: bool,
+    offline: bool,
+    show_pii: bool,
+    allow_intrusive: bool,
+    auth_self_owned: Path | None,
+    auth_dns_pubkey: str | None,
+    auth_well_known_pubkey: str | None,
+    verbose: bool,
+) -> None:
+    """Periodically rescan TARGETS and report drift against a baseline."""
+    wl_logging.configure_logging(verbose=verbose, json_output=False)
+    normalized = [_normalize_target(t) for t in targets]
+    available = sorted(all_analyzers().keys())
+    enabled = _resolve_enabled(available, enable, disable)
+
+    authorizations = {
+        target: _resolve_authorization(
+            target,
+            auth_self_owned=auth_self_owned,
+            auth_dns_pubkey=auth_dns_pubkey,
+            auth_well_known_pubkey=auth_well_known_pubkey,
+        )
+        for target in normalized
+    }
+    store = BaselineStore(db_path)
+    console = Console()
+
+    async def _scan_one(target: str) -> ScanReport:
+        config = OrchestratorConfig(
+            target=target,
+            enabled=tuple(enabled),
+            via_tor=via_tor,
+            offline=offline,
+            show_pii=show_pii,
+            allow_intrusive=allow_intrusive,
+        )
+        target_gate = AuthorizationGate(
+            authorization=authorizations[target], allow_intrusive=allow_intrusive
+        )
+        orch = Orchestrator(
+            config=config,
+            registrations=[reg for name, reg in all_analyzers().items() if name in enabled],
+            gate=target_gate,
+            authorization=authorizations[target],
+        )
+        report = await orch.run()
+        risk = HeuristicRiskEngine().assess(report.analyzers)
+        return report.model_copy(update={"risk": risk})
+
+    def _on_iteration(target: str, report: ScanReport, diff: Diff | None) -> None:
+        meaningful = diff is not None and diff.is_meaningful
+        if diff_only and not meaningful:
+            return
+        _render_watch_round(console, target, report, diff)
+
+    asyncio.run(
+        _run_watch(
+            targets=normalized,
+            interval_s=interval_s,
+            scan=_scan_one,
+            store=store,
+            on_iteration=_on_iteration,
+            max_iterations=1 if once else None,
+            console=console,
+        )
+    )
+
+
+async def _run_watch(
+    *,
+    targets: list[str],
+    interval_s: float,
+    scan: ScanFn,
+    store: BaselineStore,
+    on_iteration: OnIteration,
+    max_iterations: int | None,
+    console: Console,
+) -> None:
+    stop_event = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    installed: list[signal.Signals] = []
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(sig, stop_event.set)
+        except (NotImplementedError, RuntimeError):
+            # Windows / non-main thread — fall back to default Ctrl+C handling.
+            continue
+        installed.append(sig)
+    try:
+        outcome = await watch_loop(
+            targets=targets,
+            interval_s=interval_s,
+            scan=scan,
+            store=store,
+            on_iteration=on_iteration,
+            stop_event=stop_event,
+            max_iterations=max_iterations,
+        )
+    finally:
+        for sig in installed:
+            with contextlib.suppress(NotImplementedError, RuntimeError):
+                loop.remove_signal_handler(sig)
+    console.print(
+        f"[dim]watch finished — {outcome.iterations} round(s), "
+        f"{outcome.rounds_with_diff} with diff.[/dim]"
+    )
+
+
+def _render_watch_round(
+    console: Console, target: str, report: ScanReport, diff: Diff | None
+) -> None:
+    header = (
+        f"[bold]watch[/bold] · target=[cyan]{target}[/cyan] · "
+        f"started={report.started_at.isoformat(timespec='seconds')}"
+    )
+    console.print(header)
+    if diff is None:
+        console.print("  [dim](no baseline yet — recorded as first snapshot)[/dim]")
+        return
+    if not diff.is_meaningful:
+        console.print(
+            f"  [green]no change[/green] since "
+            f"{diff.previous_at.isoformat(timespec='seconds')}"
+        )
+        return
+    console.print(
+        f"  [yellow]diff[/yellow] vs {diff.previous_at.isoformat(timespec='seconds')}: "
+        f"+{len(diff.added)} -{len(diff.removed)} ~{len(diff.changed)}"
+    )
+    for entry in diff.added:
+        console.print(f"    [green]+[/green] {entry}")
+    for entry in diff.removed:
+        console.print(f"    [red]-[/red] {entry}")
+    for entry in diff.changed:
+        console.print(f"    [yellow]~[/yellow] {entry}")
+
+
+def _resolve_authorization(
+    target: str,
+    *,
+    auth_self_owned: Path | None,
+    auth_dns_pubkey: str | None,
+    auth_well_known_pubkey: str | None,
+) -> Authorization | None:
+    if auth_self_owned:
+        return authorize_self_owned(target, auth_self_owned)
+    if auth_dns_pubkey:
+        return asyncio.run(verify_dns_txt(target, auth_dns_pubkey))
+    if auth_well_known_pubkey:
+        return asyncio.run(verify_well_known(target, auth_well_known_pubkey))
+    return None
 
 
 # ─── verify ──────────────────────────────────────────────────────────────

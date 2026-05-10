@@ -9,10 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **`wimsalabim watch` subcommand** — daemonized scan-loop. Periodically
+  rescans one or more targets, persists snapshots in the `BaselineStore`,
+  and reports drift (added/removed/changed findings) against the previous
+  baseline. Flags: `--interval`, `--once`, `--diff-only`, `--db`, plus the
+  full `scan` flag-set (analyzer selection, Tor, offline, authorization).
+  Graceful shutdown via SIGINT/SIGTERM. Authorization is verified once per
+  target at startup.
+
 ### Planned
-- `wimsalabim watch` CLI subcommand for daemonized scanning.
 - Mock TLS server fixture to lift `tls.py` coverage.
 - Socket-mock fixture to lift `ports.py` coverage.
+- Periodic re-verification of authorization for long-running `watch` sessions.
 
 ---
 

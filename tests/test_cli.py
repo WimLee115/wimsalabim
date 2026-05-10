@@ -32,6 +32,16 @@ def test_main_help_exits_zero() -> None:
     assert "scan" in result.output
     assert "verify" in result.output
     assert "keys" in result.output
+    assert "watch" in result.output
+
+
+def test_watch_help_exits_zero() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["watch", "--help"])
+    assert result.exit_code == 0
+    assert "TARGETS" in result.output
+    assert "--interval" in result.output
+    assert "--once" in result.output
 
 
 def test_analyzers_subcommand_lists_all() -> None:

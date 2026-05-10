@@ -468,10 +468,27 @@ The `.ots` proof is an objectively-verifiable timestamp anchored on the Bitcoin 
 
 ## Watchlist mode
 
-> [!NOTE]
-> Watchlist daemon is implemented at the library layer (`wimsalabim.watch.baseline.BaselineStore`) and accessible programmatically. A first-class CLI subcommand is on the [roadmap](#roadmap) for v0.3.
+The `wimsalabim watch` subcommand re-scans one or more targets on a fixed
+interval, persists each result to a SQLite baseline, and reports drift
+(added/removed findings, grade changes) against the previous snapshot.
 
-### Programmatic usage today
+```bash
+# Scan example.com every hour, default DB at ~/.wimsalabim/watch.sqlite
+wimsalabim watch example.com
+
+# Multiple targets, 15-minute interval, only print rounds with a diff
+wimsalabim watch --interval 900 --diff-only a.example b.example
+
+# One-shot smoke test (records baseline + exits)
+wimsalabim watch --once example.com
+```
+
+Stops cleanly on `SIGINT` / `SIGTERM`. A failing scan does not bring the
+daemon down; it logs and proceeds to the next target. Authorization
+options (`--auth-self-owned`, `--auth-dns-txt`, `--auth-well-known`) are
+verified once per target at startup.
+
+### Programmatic usage
 
 ```python
 from pathlib import Path
@@ -994,9 +1011,10 @@ Active rule sets: `E`, `F`, `W`, `I`, `N`, `UP`, `B`, `C4`, `SIM`, `RUF`, `ASYNC
 
 ```
    2026 Q2  · Public release of v0.2.0                          [DONE]
-   2026 Q2  · `wimsalabim watch` CLI subcommand                 [next]
-   2026 Q2  · Mock TLS server for tls.py coverage ≥ 85%
+   2026 Q2  · `wimsalabim watch` CLI subcommand                 [DONE]
+   2026 Q2  · Mock TLS server for tls.py coverage ≥ 85%         [next]
    2026 Q2  · Socket-mock fixture for ports.py coverage ≥ 85%
+   2026 Q2  · Periodic re-verification of authorization in watch sessions
    2026 Q3  · CycloneDX VEX export
    2026 Q3  · Mutation testing (mutmut) with ≥ 80% kill rate
    2026 Q3  · Atheris fuzzing on parsers (cert, headers)
