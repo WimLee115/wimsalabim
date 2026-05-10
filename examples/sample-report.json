@@ -1,0 +1,304 @@
+{
+  "analyzers": {
+    "dns_recon": {
+      "error_kind": null,
+      "error_message": null,
+      "legal_class": "passive",
+      "name": "dns_recon",
+      "report": {
+        "analyzer": "dns_recon",
+        "duration_ms": 182.369,
+        "findings": [
+          {
+            "cvss_score": null,
+            "cvss_vector": null,
+            "cwe": "CWE-295",
+            "description": "A CAA record restricts which Certificate Authorities may issue certs for this domain. None was found.",
+            "id": "dns.caa.absent",
+            "references": [
+              "https://datatracker.ietf.org/doc/html/rfc8659"
+            ],
+            "remediation": "Add e.g.  example.com. CAA 0 issue \"letsencrypt.org\"",
+            "severity": "low",
+            "source": {
+              "body_sha256": null,
+              "kind": "dns",
+              "metadata": {},
+              "target": "example.com",
+              "timestamp": "2026-05-10T02:21:42.825250Z"
+            },
+            "title": "No CAA record"
+          }
+        ],
+        "grade": "A",
+        "metadata": {
+          "dnssec": true,
+          "records_a": "104.20.23.154,172.66.147.243",
+          "records_aaaa": "2606:4700:10::6814:179a,2606:4700:10::ac42:93f3",
+          "records_caa": "",
+          "records_cname": "",
+          "records_mx": "0 .",
+          "records_ns": "hera.ns.cloudflare.com.,elliott.ns.cloudflare.com.",
+          "records_soa": "elliott.ns.cloudflare.com. dns.cloudflare.com. 2403488901 10000 2400 604800 1800",
+          "records_txt": "\"v=spf1 -all\",\"_k2n1y4vw3qtb4skdx9e7dxt97qrmmq9\"",
+          "total_records": 10
+        },
+        "started_at": "2026-05-10T02:21:42.643238Z",
+        "target": "example.com"
+      },
+      "skip_reason": null,
+      "status": "ok"
+    },
+    "headers": {
+      "error_kind": null,
+      "error_message": null,
+      "legal_class": "passive",
+      "name": "headers",
+      "report": {
+        "analyzer": "headers",
+        "duration_ms": 338.426,
+        "findings": [
+          {
+            "cvss_score": null,
+            "cvss_vector": null,
+            "cwe": "CWE-319",
+            "description": "Server response did not include Strict-Transport-Security.",
+            "id": "headers.missing.strict-transport-security",
+            "references": [],
+            "remediation": "Add 'Strict-Transport-Security: max-age=63072000; includeSubDomains; preload'.",
+            "severity": "high",
+            "source": {
+              "body_sha256": "fb91d75a6bb430787a61b0aec5e374f580030f2878e1613eab5ca6310f7bbb9a",
+              "kind": "http",
+              "metadata": {
+                "status": "200",
+                "url": "https://example.com/"
+              },
+              "target": "example.com",
+              "timestamp": "2026-05-10T02:21:42.982550Z"
+            },
+            "title": "Security header missing: Strict-Transport-Security"
+          },
+          {
+            "cvss_score": null,
+            "cvss_vector": null,
+            "cwe": "CWE-693",
+            "description": "Server response did not include Content-Security-Policy.",
+            "id": "headers.missing.content-security-policy",
+            "references": [],
+            "remediation": "Define a baseline CSP, e.g. \"default-src 'self'; object-src 'none'\".",
+            "severity": "medium",
+            "source": {
+              "body_sha256": "fb91d75a6bb430787a61b0aec5e374f580030f2878e1613eab5ca6310f7bbb9a",
+              "kind": "http",
+              "metadata": {
+                "status": "200",
+                "url": "https://example.com/"
+              },
+              "target": "example.com",
+              "timestamp": "2026-05-10T02:21:42.982550Z"
+            },
+            "title": "Security header missing: Content-Security-Policy"
+          },
+          {
+            "cvss_score": null,
+            "cvss_vector": null,
+            "cwe": "CWE-1021",
+            "description": "Server response did not include X-Frame-Options.",
+            "id": "headers.missing.x-frame-options",
+            "references": [],
+            "remediation": "Set 'X-Frame-Options: DENY' (or use frame-ancestors in CSP).",
+            "severity": "medium",
+            "source": {
+              "body_sha256": "fb91d75a6bb430787a61b0aec5e374f580030f2878e1613eab5ca6310f7bbb9a",
+              "kind": "http",
+              "metadata": {
+                "status": "200",
+                "url": "https://example.com/"
+              },
+              "target": "example.com",
+              "timestamp": "2026-05-10T02:21:42.982550Z"
+            },
+            "title": "Security header missing: X-Frame-Options"
+          },
+          {
+            "cvss_score": null,
+            "cvss_vector": null,
+            "cwe": "CWE-693",
+            "description": "Server response did not include X-Content-Type-Options.",
+            "id": "headers.missing.x-content-type-options",
+            "references": [],
+            "remediation": "Set 'X-Content-Type-Options: nosniff'.",
+            "severity": "low",
+            "source": {
+              "body_sha256": "fb91d75a6bb430787a61b0aec5e374f580030f2878e1613eab5ca6310f7bbb9a",
+              "kind": "http",
+              "metadata": {
+                "status": "200",
+                "url": "https://example.com/"
+              },
+              "target": "example.com",
+              "timestamp": "2026-05-10T02:21:42.982550Z"
+            },
+            "title": "Security header missing: X-Content-Type-Options"
+          },
+          {
+            "cvss_score": null,
+            "cvss_vector": null,
+            "cwe": "CWE-200",
+            "description": "Server response did not include Referrer-Policy.",
+            "id": "headers.missing.referrer-policy",
+            "references": [],
+            "remediation": "Set 'Referrer-Policy: strict-origin-when-cross-origin'.",
+            "severity": "low",
+            "source": {
+              "body_sha256": "fb91d75a6bb430787a61b0aec5e374f580030f2878e1613eab5ca6310f7bbb9a",
+              "kind": "http",
+              "metadata": {
+                "status": "200",
+                "url": "https://example.com/"
+              },
+              "target": "example.com",
+              "timestamp": "2026-05-10T02:21:42.982550Z"
+            },
+            "title": "Security header missing: Referrer-Policy"
+          },
+          {
+            "cvss_score": null,
+            "cvss_vector": null,
+            "cwe": "CWE-693",
+            "description": "Server response did not include Permissions-Policy.",
+            "id": "headers.missing.permissions-policy",
+            "references": [],
+            "remediation": "Restrict APIs you do not use, e.g. 'Permissions-Policy: geolocation=()'.",
+            "severity": "low",
+            "source": {
+              "body_sha256": "fb91d75a6bb430787a61b0aec5e374f580030f2878e1613eab5ca6310f7bbb9a",
+              "kind": "http",
+              "metadata": {
+                "status": "200",
+                "url": "https://example.com/"
+              },
+              "target": "example.com",
+              "timestamp": "2026-05-10T02:21:42.982550Z"
+            },
+            "title": "Security header missing: Permissions-Policy"
+          },
+          {
+            "cvss_score": null,
+            "cvss_vector": null,
+            "cwe": "CWE-200",
+            "description": "Server is set to 'cloudflare', revealing software/version detail.",
+            "id": "headers.leak.server",
+            "references": [],
+            "remediation": "Remove the Server header from server config.",
+            "severity": "low",
+            "source": {
+              "body_sha256": null,
+              "kind": "http",
+              "metadata": {
+                "url": "https://example.com/"
+              },
+              "target": "example.com",
+              "timestamp": "2026-05-10T02:21:42.982550Z"
+            },
+            "title": "Information-disclosing header: Server"
+          }
+        ],
+        "grade": "D",
+        "metadata": {
+          "info_leaks": "Server: cloudflare",
+          "missing": "Strict-Transport-Security,Content-Security-Policy,X-Frame-Options,X-Content-Type-Options,Referrer-Policy,Permissions-Policy",
+          "present": "",
+          "protocol": "HTTP/2",
+          "status": 200,
+          "url": "https://example.com/"
+        },
+        "started_at": "2026-05-10T02:21:42.644349Z",
+        "target": "example.com"
+      },
+      "skip_reason": null,
+      "status": "ok"
+    },
+    "tls": {
+      "error_kind": null,
+      "error_message": null,
+      "legal_class": "passive",
+      "name": "tls",
+      "report": {
+        "analyzer": "tls",
+        "duration_ms": 2131.6980000000003,
+        "findings": [],
+        "grade": "A",
+        "metadata": {
+          "cipher": "TLS_AES_256_GCM_SHA384",
+          "days_until_expiry": 52,
+          "issuer": "CN=Cloudflare TLS Issuing ECC CA 1,O=CLOUDFLARE\\, INC.,C=US",
+          "not_after": "2026-07-01T21:24:46+00:00",
+          "not_before": "2026-04-02T21:18:57+00:00",
+          "protocol": "TLSv1.3",
+          "subject": "CN=example.com"
+        },
+        "started_at": "2026-05-10T02:21:42.649239Z",
+        "target": "example.com"
+      },
+      "skip_reason": null,
+      "status": "ok"
+    }
+  },
+  "authorization": null,
+  "config_hash": "95379c487effbf10326f38d3fb926c284028a68c5605dcab69bc229e57ba5c4b",
+  "duration_ms": 2151.408,
+  "ots_proof_path": null,
+  "risk": {
+    "engine": "rules",
+    "grade": "B",
+    "overall_score": 28.0,
+    "rules_fired": [
+      {
+        "cwe": "CWE-319",
+        "points": 12.0,
+        "rationale": "HSTS absent \u2014 downgrade attacks possible on first connect.",
+        "rule_id": "WSL-HEADERS-001",
+        "rule_name": "Strict-Transport-Security header missing",
+        "severity": "high"
+      },
+      {
+        "cwe": "CWE-693",
+        "points": 8.0,
+        "rationale": "CSP absent \u2014 XSS mitigation surface dramatically smaller.",
+        "rule_id": "WSL-HEADERS-002",
+        "rule_name": "Content-Security-Policy header missing",
+        "severity": "medium"
+      },
+      {
+        "cwe": "CWE-1021",
+        "points": 5.0,
+        "rationale": "Frame-Options absent \u2014 clickjacking surface present.",
+        "rule_id": "WSL-HEADERS-003",
+        "rule_name": "X-Frame-Options / frame-ancestors missing",
+        "severity": "medium"
+      },
+      {
+        "cwe": "CWE-295",
+        "points": 3.0,
+        "rationale": "No CAA record limits which CAs may issue certs for this domain.",
+        "rule_id": "WSL-DNS-002",
+        "rule_name": "CAA record absent",
+        "severity": "low"
+      }
+    ],
+    "severity_counts": {
+      "high": 1,
+      "low": 1,
+      "medium": 2
+    },
+    "summary": "Grade B (28.0/100) \u2014 1 high \u2014 4 rule(s) fired total."
+  },
+  "schema_version": "wimsalabim/2.0",
+  "signature": null,
+  "signing_pubkey": null,
+  "started_at": "2026-05-10T02:21:42.634114Z",
+  "target": "example.com",
+  "tool_version": "0.2.0"
+}

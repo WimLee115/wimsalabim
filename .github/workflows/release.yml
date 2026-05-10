@@ -1,0 +1,170 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ── 1. Re-run all gates so we never publish a red build ────────────────
+  verify:
+    name: Verify (lint · types · tests · audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" bandit pip-audit
+      - name: Ruff (format + lint)
+        run: |
+          ruff format --check src tests
+          ruff check src tests
+      - name: Mypy
+        run: mypy src
+      - name: Pytest
+        run: pytest -v
+      - name: Bandit
+        run: bandit -r src --severity-level low
+      - name: pip-audit
+        run: pip-audit --strict
+
+  # ── 2. Build wheel + sdist ─────────────────────────────────────────────
+  build:
+    name: Build distribution
+    runs-on: ubuntu-latest
+    needs: verify
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Extract version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Build
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+      - name: Validate metadata
+        run: |
+          python -m pip install twine
+          twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 30
+
+  # ── 3. Publish to PyPI via OIDC trusted publisher (no API tokens) ──────
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: pypi
+      url: https://pypi.org/p/wimsalabim
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          attestations: true
+
+  # ── 4. Cryptographically sign artefacts + provenance ───────────────────
+  sign:
+    name: Sigstore + provenance
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      id-token: write
+      contents: read
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Sigstore sign
+        uses: sigstore/gh-action-sigstore-python@v3.0.0
+        with:
+          inputs: |
+            ./dist/*.tar.gz
+            ./dist/*.whl
+      - name: Build-provenance attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: |
+            ./dist/*.tar.gz
+            ./dist/*.whl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-signed
+          path: |
+            ./dist/*.tar.gz
+            ./dist/*.whl
+            ./dist/*.sigstore
+            ./dist/*.crt
+            ./dist/*.sig
+          retention-days: 90
+
+  # ── 5. Create GitHub Release with notes + signed artefacts ─────────────
+  github-release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build, sign, publish-pypi]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-signed
+          path: dist/
+      - name: Extract changelog section
+        id: changelog
+        run: |
+          python - <<'EOF' >> "$GITHUB_OUTPUT"
+          import os
+          import re
+
+          tag = os.environ["GITHUB_REF_NAME"].lstrip("v")
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          m = re.search(
+              rf"^## \[{re.escape(tag)}\][^\n]*\n(.*?)(?=^## \[|\Z)",
+              text,
+              re.MULTILINE | re.DOTALL,
+          )
+          body = (m.group(1).strip() if m else f"Release {tag}").replace("%", "%%")
+          print("body<<EOF")
+          print(body)
+          print("EOF")
+          EOF
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: "wimsalabim ${{ needs.build.outputs.version }}"
+          body: ${{ steps.changelog.outputs.body }}
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+          files: |
+            ./dist/*.tar.gz
+            ./dist/*.whl
+            ./dist/*.sigstore

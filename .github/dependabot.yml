@@ -1,0 +1,49 @@
+version: 2
+
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "WimLee115"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      runtime-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "click"
+          - "rich"
+          - "httpx*"
+          - "pydantic*"
+          - "structlog"
+          - "tenacity"
+          - "dnspython"
+          - "python-whois"
+          - "cryptography"
+      dev-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "pytest*"
+          - "respx"
+          - "ruff"
+          - "mypy*"
+          - "types-*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "chore(ci)"

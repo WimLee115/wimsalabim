@@ -1,0 +1,13 @@
+# wimsalabim — self-owned domains manifest example
+#
+# Format:  one host per line.
+# Lines starting with # are comments.
+# Blank lines are ignored.
+# Subdomains of declared hosts are automatically authorized.
+#
+# Use:
+#   wimsalabim scan example.com --auth-self-owned ./owned-domains.txt --enable ports
+
+example.com
+api.example.com
+internal.lab.example.com

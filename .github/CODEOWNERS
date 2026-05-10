@@ -1,0 +1,34 @@
+# wimsalabim — review routing
+#
+# Ordering matters: later patterns override earlier ones.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default — Captain WimLee115 reviews everything.
+*                                               @WimLee115
+
+# ── Critical security paths (call out for emphasis in PRs) ─────────────
+/src/wimsalabim/core/authorization.py           @WimLee115
+/src/wimsalabim/core/crypto.py                  @WimLee115
+/src/wimsalabim/core/canonical.py               @WimLee115
+/src/wimsalabim/core/privacy.py                 @WimLee115
+/src/wimsalabim/core/http_client.py             @WimLee115
+/src/wimsalabim/core/timestamps.py              @WimLee115
+
+# ── Risk engine: every score change deserves audit ────────────────────
+/src/wimsalabim/risk/                           @WimLee115
+
+# ── CI / build / release ──────────────────────────────────────────────
+/.github/workflows/                             @WimLee115
+/.github/dependabot.yml                         @WimLee115
+/Dockerfile                                     @WimLee115
+/.dockerignore                                  @WimLee115
+/pyproject.toml                                 @WimLee115
+/Makefile                                       @WimLee115
+
+# ── Policy / governance ───────────────────────────────────────────────
+/SECURITY.md                                    @WimLee115
+/LICENSE                                        @WimLee115
+/CODE_OF_CONDUCT.md                             @WimLee115
+/CITATION.cff                                   @WimLee115
+/docs/legal.md                                  @WimLee115
+/docs/PENTEST_REPORT.md                         @WimLee115

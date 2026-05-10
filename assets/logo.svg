@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600" role="img" aria-label="wimsalabim — PVNL · Captain WimLee115">
+  <title>wimsalabim — PVNL · Captain WimLee115</title>
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="62%">
+      <stop offset="0%"  stop-color="#0d1b2a"/>
+      <stop offset="55%" stop-color="#04080f"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="lensGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#22ff88"/>
+      <stop offset="100%" stop-color="#00d9ff"/>
+    </linearGradient>
+    <filter id="neon" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="3"  result="b1"/>
+      <feGaussianBlur stdDeviation="7"  in="b1" result="b2"/>
+      <feGaussianBlur stdDeviation="14" in="b2" result="b3"/>
+      <feMerge>
+        <feMergeNode in="b3"/>
+        <feMergeNode in="b2"/>
+        <feMergeNode in="b1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="textGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.5" result="b1"/>
+      <feGaussianBlur stdDeviation="3"   in="b1" result="b2"/>
+      <feMerge>
+        <feMergeNode in="b2"/>
+        <feMergeNode in="b1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <path id="topArc"    d="M 90 300 A 210 210 0 0 1 510 300" fill="none"/>
+    <path id="bottomArc" d="M 90 300 A 210 210 0 0 0 510 300" fill="none"/>
+    <style><![CDATA[
+      @keyframes pulse  { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+      @keyframes spin   { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+      @keyframes scan   { 0% { transform: translateY(-200px); opacity: 0; }
+                          5% { opacity: 1; }
+                          95% { opacity: 1; }
+                          100% { transform: translateY(200px); opacity: 0; } }
+      .pulse   { animation: pulse 4s ease-in-out infinite; }
+      .ringSpin{ transform-origin: 300px 300px; animation: spin 80s linear infinite; }
+      .scanLine{ transform-origin: 300px 300px; animation: scan 6s ease-in-out infinite; }
+    ]]></style>
+  </defs>
+
+  <!-- background -->
+  <rect width="600" height="600" fill="url(#bgGrad)"/>
+
+  <!-- radar grid -->
+  <g stroke="#0a4d6b" stroke-width="0.5" opacity="0.35">
+    <line x1="0" y1="300" x2="600" y2="300"/>
+    <line x1="300" y1="0" x2="300" y2="600"/>
+    <circle cx="300" cy="300" r="80"  fill="none"/>
+    <circle cx="300" cy="300" r="130" fill="none"/>
+    <circle cx="300" cy="300" r="180" fill="none"/>
+    <circle cx="300" cy="300" r="230" fill="none"/>
+  </g>
+
+  <!-- outer rings -->
+  <g fill="none" stroke="#00d9ff" stroke-linecap="round">
+    <circle cx="300" cy="300" r="270" stroke-width="2" opacity="0.18"/>
+    <circle cx="300" cy="300" r="252" stroke-width="3.2" filter="url(#neon)" class="pulse"/>
+    <circle cx="300" cy="300" r="240" stroke-width="0.8" opacity="0.55"/>
+  </g>
+
+  <!-- rotating ticks -->
+  <g class="ringSpin" stroke="#00d9ff" stroke-width="2" opacity="0.7" filter="url(#neon)">
+    <line x1="300" y1="38"  x2="300" y2="58"/>
+    <line x1="300" y1="542" x2="300" y2="562"/>
+    <line x1="38"  y1="300" x2="58"  y2="300"/>
+    <line x1="542" y1="300" x2="562" y2="300"/>
+    <line x1="86"  y1="86"  x2="100" y2="100"/>
+    <line x1="514" y1="86"  x2="500" y2="100"/>
+    <line x1="86"  y1="514" x2="100" y2="500"/>
+    <line x1="514" y1="514" x2="500" y2="500"/>
+  </g>
+
+  <!-- top arc text -->
+  <text font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="22" font-weight="800"
+        fill="#ffffff" letter-spacing="6" filter="url(#textGlow)">
+    <textPath href="#topArc" startOffset="50%" text-anchor="middle">
+      W I M S A L A B I M
+    </textPath>
+  </text>
+
+  <!-- bottom arc text -->
+  <text font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="13" font-weight="700"
+        fill="#00d9ff" letter-spacing="6" opacity="0.95" filter="url(#textGlow)">
+    <textPath href="#bottomArc" startOffset="50%" text-anchor="middle">
+      P V N L · WET BINNEN · BEWIJS BUITEN
+    </textPath>
+  </text>
+
+  <!-- central magnifier (the "scan" lens) -->
+  <g filter="url(#neon)">
+    <circle cx="280" cy="285" r="86" fill="none" stroke="url(#lensGrad)" stroke-width="6"/>
+    <circle cx="280" cy="285" r="78" fill="#001214" opacity="0.85"/>
+    <!-- scan-line inside lens -->
+    <g clip-path="circle(78px at 280px 285px)">
+      <line class="scanLine" x1="200" y1="285" x2="360" y2="285"
+            stroke="#22ff88" stroke-width="2.5" opacity="0.9"/>
+    </g>
+    <!-- target crosshair -->
+    <g stroke="#22ff88" stroke-width="1.5" opacity="0.85">
+      <line x1="280" y1="245" x2="280" y2="265"/>
+      <line x1="280" y1="305" x2="280" y2="325"/>
+      <line x1="240" y1="285" x2="260" y2="285"/>
+      <line x1="300" y1="285" x2="320" y2="285"/>
+    </g>
+    <!-- small inner blip -->
+    <circle cx="280" cy="285" r="3" fill="#22ff88"/>
+    <!-- handle of magnifier -->
+    <line x1="345" y1="350" x2="420" y2="425" stroke="url(#lensGrad)" stroke-width="9" stroke-linecap="round"/>
+    <rect x="412" y="417" width="22" height="22" rx="3"
+          transform="rotate(45 423 428)"
+          fill="#001214" stroke="url(#lensGrad)" stroke-width="3"/>
+  </g>
+
+  <!-- legal badge -->
+  <g filter="url(#textGlow)">
+    <rect x="200" y="455" width="200" height="36" rx="3"
+          fill="#000814" stroke="#00d9ff" stroke-width="1.8"/>
+    <text x="300" y="479" text-anchor="middle"
+          font-family="ui-monospace,'SF Mono',Menlo,monospace"
+          font-size="14" font-weight="800" fill="#22ff88" letter-spacing="3">
+      Sr 138ab · AVG-veilig
+    </text>
+  </g>
+
+  <!-- year -->
+  <text x="300" y="510" text-anchor="middle"
+        font-family="ui-monospace,'SF Mono',Menlo,monospace"
+        font-size="11" fill="#00d9ff" letter-spacing="6" opacity="0.85"
+        filter="url(#textGlow)">
+    · MMXXVI ·
+  </text>
+</svg>

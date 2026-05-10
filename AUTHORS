@@ -1,0 +1,34 @@
+wimsalabim — authors and acknowledgements
+
+Maintainer
+==========
+
+Captain WimLee115  <github.com/WimLee115>
+
+
+Contributors
+============
+
+(Listed in chronological order of first commit.)
+
+Captain WimLee115            — initial design, all v0.2.0 code, audit
+
+
+Acknowledgements
+================
+
+This project stands on the shoulders of:
+
+- Filippo Valsorda and the `cryptography` maintainers — Ed25519 primitives.
+- Samuel Colvin and the pydantic team — schema validation.
+- Tom Christie and encode/* — httpx, rich, click.
+- Hynek Schlawack — structlog.
+- The dnspython maintainers — async DNS.
+- Peter Todd and the OpenTimestamps team — verifiable timestamping.
+- The OASIS SARIF working group — interoperable result interchange.
+
+PVNL flag
+=========
+
+wimsalabim sails under the Privacy Verzet NL (PVNL) flag. See
+https://github.com/WimLee115/Privacy-VerzetNL for the umbrella project.

@@ -1,0 +1,49 @@
+# Keep the build context tiny.
+.git/
+.github/
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.tox/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.egg-info/
+build/
+dist/
+__pycache__/
+*.py[cod]
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Tests + docs not needed at runtime
+tests/
+docs/
+examples/
+
+# Tooling configs (kept in source repo, not in image)
+.pre-commit-config.yaml
+.editorconfig
+Makefile
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+CHANGELOG.md
+AUTHORS
+CITATION.cff
+PYPI_README.md
+
+# Secrets — never copied even by accident
+*.pem
+*.key
+*.crt
+.env
+.env.*
+secrets/

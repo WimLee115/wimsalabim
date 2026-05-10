@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+title: "wimsalabim: Honest, audit-grade website security and privacy reconnaissance"
+message: "If you use this software, please cite it as below."
+authors:
+  - alias: WimLee115
+    given-names: Captain
+    family-names: WimLee115
+    affiliation: "PVNL — Privacy Verzet NL"
+type: software
+version: 0.2.0
+date-released: 2026-05-10
+license: AGPL-3.0-or-later
+repository-code: "https://github.com/WimLee115/wimsalabim"
+url: "https://github.com/WimLee115/wimsalabim"
+keywords:
+  - security
+  - privacy
+  - reconnaissance
+  - osint
+  - tls
+  - dns
+  - http
+  - sarif
+  - audit
+  - pvnl
+abstract: >
+  wimsalabim is a single-binary CLI for honest, audit-grade website security
+  and privacy reconnaissance. It refuses, in code, to perform active scans
+  against unauthorized targets (NL Sr 138ab compliance). Reports are
+  Ed25519-signed RFC-8785 canonical JSON, optionally anchored on Bitcoin via
+  OpenTimestamps. The risk engine is rule-based and explainable — no machine
+  learning cargo-cult. No telemetry, no analytics, no phone-home.
+preferred-citation:
+  type: software
+  title: "wimsalabim"
+  authors:
+    - alias: WimLee115
+  version: 0.2.0
+  year: 2026
+  url: "https://github.com/WimLee115/wimsalabim"

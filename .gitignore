@@ -1,0 +1,77 @@
+# ─────────────────────────────────────────────────────────────────────
+#  wimsalabim · .gitignore · PVNL · Captain WimLee115
+# ─────────────────────────────────────────────────────────────────────
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# Virtual envs
+.venv/
+venv/
+env/
+ENV/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.cache/
+coverage.xml
+*.cover
+
+# Type-checking / linting
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
+
+# IDE
+.vscode/
+.vscode-oss/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets — nooit ofte nimmer
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+secrets/
+credentials.*
+
+# Reports / runtime data
+~/.wimsalabim/
+reports/
+*.report.json
+scan-output/
+
+# Logs
+*.log
+logs/
+
+# Cassettes / fixtures (groot)
+tests/cassettes/
+tests/fixtures/large/
+
+# Hatch / wheel
+*.whl
