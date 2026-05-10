@@ -38,10 +38,11 @@ jobs:
       - name: Bandit
         run: bandit -r src --severity-level low
       - name: pip-audit
-        # --skip-editable: our own package is editable-installed via `pip install -e .`
-        # and therefore not on PyPI yet (this very job will publish it). All other
-        # dependencies remain audited under --strict.
-        run: pip-audit --strict --skip-editable
+        # --skip-editable: our own package is editable-installed (`pip install -e .`)
+        # and not yet on PyPI — this very job will publish it. All other deps remain
+        # audited; pip-audit exits non-zero if any of them has a known vulnerability.
+        # Note: --strict is incompatible with --skip-editable (every skip becomes a fail).
+        run: pip-audit --skip-editable
 
   # ── 2. Build wheel + sdist ─────────────────────────────────────────────
   build:
