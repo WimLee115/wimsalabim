@@ -25,6 +25,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.1] — 2026-05-10
+
+Security-hardening release. No functional changes; addresses 56 alerts in
+the GitHub Security tab from CodeQL and OpenSSF Scorecard against the
+v0.2.0 baseline.
+
+### Changed
+- **All GitHub Actions pinned to commit SHAs** instead of mutable tags
+  (`actions/checkout@<sha>` etc., with the original tag preserved as a
+  trailing comment). Closes 28+ Scorecard `Pinned-Dependencies` findings.
+  Dependabot is configured to keep them current via auto-PRs.
+- **Restrictive default workflow permissions**: every workflow now declares
+  a top-level `permissions: contents: read`, and each job adds only the
+  additional scopes it actually needs (`id-token: write`,
+  `security-events: write`, …). Closes 3 Scorecard `Token-Permissions`
+  findings.
+- **`SECURITY.md` enriched** with supported-versions, reporting channels,
+  PGP-key placeholder, disclosure timeline, scope, hardening checklist,
+  and build-provenance verification commands. Aligns with the Scorecard
+  `Security-Policy` heuristic.
+
+### Security
+- 9 CodeQL alerts reviewed and dismissed with rationale:
+  - 2× `py/incomplete-url-substring-sanitization` — test assertions, not
+    URL sanitization.
+  - 2× `py/unsafe-cyclic-import` — design choice; the cycle is
+    `TYPE_CHECKING`-only, runtime acyclic.
+  - 2× `py/unused-import` — intentional decorator-side-effect import
+    (already `# noqa: F401`).
+  - 1× `py/unused-global-variable` — global flag declared with `global`
+    keyword and read in the same function.
+
+---
+
 ## [0.2.0] — 2026-05-10
 
 A complete refactor from v0.1. **Not backwards-compatible.** v0.1 users should

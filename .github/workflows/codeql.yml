@@ -11,9 +11,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
-  packages: read
-  actions: read
 
 concurrency:
   group: codeql-${{ github.ref }}
@@ -23,6 +20,11 @@ jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      packages: read
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -31,10 +33,10 @@ jobs:
             build-mode: none
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@52485aec7be33610227643b0fe83936b8b5f061a  # v3
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
@@ -43,7 +45,7 @@ jobs:
           queries: security-and-quality
 
       - name: Perform analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@52485aec7be33610227643b0fe83936b8b5f061a  # v3
         with:
           category: "/language:${{ matrix.language }}"
           upload: always

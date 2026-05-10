@@ -7,7 +7,7 @@ authors:
     family-names: WimLee115
     affiliation: "PVNL — Privacy Verzet NL"
 type: software
-version: 0.2.0
+version: 0.2.1
 date-released: 2026-05-10
 license: AGPL-3.0-or-later
 repository-code: "https://github.com/WimLee115/wimsalabim"
@@ -35,6 +35,6 @@ preferred-citation:
   title: "wimsalabim"
   authors:
     - alias: WimLee115
-  version: 0.2.0
+  version: 0.2.1
   year: 2026
   url: "https://github.com/WimLee115/wimsalabim"
