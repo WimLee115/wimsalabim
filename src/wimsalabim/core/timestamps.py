@@ -12,7 +12,7 @@ once the proof has been upgraded (typically a few hours after creation).
 from __future__ import annotations
 
 import shutil
-import subprocess
+import subprocess  # nosec B404 - intentional: required for OpenTimestamps CLI integration; never invokes shell
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -43,8 +43,12 @@ def stamp(digest_file: Path) -> TimestampProof:
     if not digest_file.is_file():
         raise FileNotFoundError(digest_file)
 
+    # nosec B603,B607 - intentional:
+    #   B603 (no shell=True): we use list-form, never user-supplied shell
+    #   B607 (partial path): "ots" must come from operator's PATH (pipx install)
+    #   digest_file is operator-controlled Path, validated above.
     result = subprocess.run(
-        ["ots", "stamp", str(digest_file)],
+        ["ots", "stamp", str(digest_file)],  # nosec B603 B607
         check=False,
         capture_output=True,
         text=True,
@@ -65,8 +69,9 @@ def verify(proof_path: Path) -> bool:
         raise OpenTimestampsUnavailable(
             "ots CLI not found. Install with: pipx install opentimestamps-client"
         )
+    # See stamp() for rationale on B603/B607 suppression.
     result = subprocess.run(
-        ["ots", "verify", str(proof_path)],
+        ["ots", "verify", str(proof_path)],  # nosec B603 B607
         check=False,
         capture_output=True,
         text=True,
