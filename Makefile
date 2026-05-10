@@ -75,7 +75,7 @@ test-cov:
 
 security:
 	$(BANDIT) -r src --severity-level low
-	$(PIPAUDIT)
+	$(PIPAUDIT) --skip-editable
 
 audit: lint typecheck security
 
