@@ -191,9 +191,7 @@ def _sign_bytes(kp: SigningKeyPair, data: bytes) -> str:
     help="SQLite file used as baseline store.",
 )
 @click.option("--once", is_flag=True, help="Run a single round and exit.")
-@click.option(
-    "--diff-only", is_flag=True, help="Only print rounds with a meaningful diff."
-)
+@click.option("--diff-only", is_flag=True, help="Only print rounds with a meaningful diff.")
 @click.option("--enable", "-e", multiple=True, help="Enable only these analyzers (repeatable).")
 @click.option("--disable", "-d", multiple=True, help="Disable these analyzers (repeatable).")
 @click.option("--via-tor", is_flag=True, help="Route HTTP via local Tor SOCKS5.")
@@ -349,8 +347,7 @@ def _render_watch_round(
         return
     if not diff.is_meaningful:
         console.print(
-            f"  [green]no change[/green] since "
-            f"{diff.previous_at.isoformat(timespec='seconds')}"
+            f"  [green]no change[/green] since {diff.previous_at.isoformat(timespec='seconds')}"
         )
         return
     console.print(
