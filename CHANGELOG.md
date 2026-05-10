@@ -9,15 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Added
-- **`wimsalabim watch` subcommand** — daemonized scan-loop. Periodically
-  rescans one or more targets, persists snapshots in the `BaselineStore`,
-  and reports drift (added/removed/changed findings) against the previous
-  baseline. Flags: `--interval`, `--once`, `--diff-only`, `--db`, plus the
-  full `scan` flag-set (analyzer selection, Tor, offline, authorization).
-  Graceful shutdown via SIGINT/SIGTERM. Authorization is verified once per
-  target at startup.
-
 ### Planned
 - Mock TLS server fixture to lift `tls.py` coverage.
 - Socket-mock fixture to lift `ports.py` coverage.
@@ -25,11 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [0.2.1] — 2026-05-10
+## [0.3.0] — 2026-05-10
 
-Security-hardening release. No functional changes; addresses 56 alerts in
-the GitHub Security tab from CodeQL and OpenSSF Scorecard against the
-v0.2.0 baseline.
+A combined feature + security-hardening release.
+
+### Added
+- **`wimsalabim watch` subcommand** — daemonized scan-loop. Periodically
+  rescans one or more targets, persists snapshots in the `BaselineStore`,
+  and reports drift (added / removed / changed findings) against the
+  previous baseline. Flags: `--interval`, `--once`, `--diff-only`, `--db`,
+  plus the full `scan` flag-set (analyzer selection, Tor, offline,
+  authorization). Graceful shutdown via SIGINT / SIGTERM. Authorization
+  is verified once per target at startup.
 
 ### Changed
 - **All GitHub Actions pinned to commit SHAs** instead of mutable tags
@@ -41,10 +39,10 @@ v0.2.0 baseline.
   additional scopes it actually needs (`id-token: write`,
   `security-events: write`, …). Closes 3 Scorecard `Token-Permissions`
   findings.
-- **`SECURITY.md` enriched** with supported-versions, reporting channels,
-  PGP-key placeholder, disclosure timeline, scope, hardening checklist,
-  and build-provenance verification commands. Aligns with the Scorecard
-  `Security-Policy` heuristic.
+- **`SECURITY.md` enriched** with supported-versions table, reporting
+  channels, PGP-key placeholder, disclosure timeline, scope, hardening
+  checklist, and build-provenance verification commands. Aligns with the
+  Scorecard `Security-Policy` heuristic.
 
 ### Security
 - 9 CodeQL alerts reviewed and dismissed with rationale:
@@ -54,8 +52,8 @@ v0.2.0 baseline.
     `TYPE_CHECKING`-only, runtime acyclic.
   - 2× `py/unused-import` — intentional decorator-side-effect import
     (already `# noqa: F401`).
-  - 1× `py/unused-global-variable` — global flag declared with `global`
-    keyword and read in the same function.
+  - 1× `py/unused-global-variable` — global flag declared with the
+    `global` keyword and read in the same function.
 
 ---
 
@@ -125,6 +123,7 @@ Score: **3.7 / 10**. See [`docs/PENTEST_REPORT.md`](docs/PENTEST_REPORT.md) §8.
 
 ---
 
-[Unreleased]: https://github.com/WimLee115/wimsalabim/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/WimLee115/wimsalabim/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/WimLee115/wimsalabim/releases/tag/v0.3.0
 [0.2.0]: https://github.com/WimLee115/wimsalabim/releases/tag/v0.2.0
 [0.1.0]: https://github.com/WimLee115/wimsalabim/releases/tag/v0.1.0
